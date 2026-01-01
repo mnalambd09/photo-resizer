@@ -1,51 +1,79 @@
 let cropper;
 const imageInput = document.getElementById('imageInput');
 const imagePreview = document.getElementById('imagePreview');
+const imageWrapper = document.getElementById('imageWrapper');
+const status = document.getElementById('status');
+const resultDiv = document.getElementById('result');
+const dropZone = document.getElementById('dropZone');
 
-// ছবি আপলোড হলে প্রিভিউ দেখানো
-imageInput.addEventListener('change', (e) => {
+// ক্লিক করলে ফাইল ইনপুট ওপেন হবে
+dropZone.onclick = () => imageInput.click();
+
+// একই ছবি বারবার সিলেক্ট করার জন্য রিসেট
+imageInput.onclick = function() { this.value = null; };
+
+imageInput.onchange = function(e) {
     const file = e.target.files;
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            imagePreview.src = event.target.result;
-            imagePreview.style.display = 'block';
+    if (!file) return;
+
+    status.innerText = "ছবি লোড হচ্ছে...";
+    const reader = new FileReader();
+    
+    reader.onload = function(event) {
+        imagePreview.src = event.target.result;
+        imageWrapper.style.display = 'block';
+
+        imagePreview.onload = function() {
             if (cropper) cropper.destroy();
+            
             cropper = new Cropper(imagePreview, {
-                viewMode: 1,
-                dragMode: 'move'
+                viewMode: 2,
+                dragMode: 'move',
+                autoCropArea: 1,
+                checkOrientation: true // মোবাইল রোটেশন ঠিক করার জন্য 
             });
+            status.innerText = "ছবি লোড হয়েছে। এখন ক্রপ করুন।";
         };
-        reader.readAsDataURL(file);
-    }
-});
+    };
+    reader.readAsDataURL(file);
+};
 
-// রিসাইজ এবং কমপ্রেশন ফাংশন 
 async function processImage(width, height, maxKb) {
-    if (!cropper) return alert("Please select an image first!");
-    
-    // ক্রপ করা অংশ ক্যানভাসে নেয়া
-    const canvas = cropper.getCroppedCanvas({ width, height });
-    
-    // বাইনারি সার্চের মাধ্যমে কোয়ালিটি অ্যাডজাস্ট করা যাতে ফাইল সাইজ লিমিটের মধ্যে থাকে [3]
-    let quality = 0.9;
-    let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
-    
-    while (blob.size / 1024 > maxKb && quality > 0.1) {
-        quality -= 0.05;
-        blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
-    }
+    if (!cropper) return alert("দয়া করে আগে একটি ছবি আপলোড করুন!");
 
-    // ডাউনলোড লিংক তৈরি [6]
+    status.innerText = "প্রসেসিং হচ্ছে...";
+    resultDiv.innerHTML = "";
+
+    // ক্যানভাসে নির্দিষ্ট ডাইমেনশনে ছবি নেওয়া 
+    const canvas = cropper.getCroppedCanvas({
+        width: width,
+        height: height,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high'
+    });
+
+    let quality = 0.92;
+    let blob;
+    let sizeKb = 0;
+
+    // ইটারেটিভ কমপ্রেশন লজিক যাতে সাইজ লিমিটের নিচে থাকে [1]
+    do {
+        blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+        sizeKb = blob.size / 1024;
+        quality -= 0.05;
+    } while (sizeKb > maxKb && quality > 0.1);
+
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `resized_image.jpg`;
-    link.innerText = `Download (${(blob.size/1024).toFixed(2)} KB)`;
-    document.getElementById('result').innerHTML = '';
-    document.getElementById('result').appendChild(link);
+    status.innerText = `রেডি! সাইজ: ${sizeKb.toFixed(2)} KB`;
+    resultDiv.innerHTML = `<a href="${url}" download="teletalk_${width}x${height}.jpg" class="download-link">ডাউনলোড করুন</a>`;
 }
 
-// বাটন ক্লিক ইভেন্ট
-document.getElementById('resizePhotoBtn').onclick = () => processImage(300, 300, 100);
-document.getElementById('resizeSignBtn').onclick = () => processImage(300, 80, 60);
+document.getElementById('photoBtn').onclick = () => {
+    if(cropper) cropper.setAspectRatio(1/1);
+    processImage(300, 300, 100);
+};
+
+document.getElementById('signBtn').onclick = () => {
+    if(cropper) cropper.setAspectRatio(300/80);
+    processImage(300, 80, 60);
+};
