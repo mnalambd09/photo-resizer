@@ -3,23 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teletalk Photo & Signature Resizer (Ultimate Fix)</title>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
-       .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-       .upload-box { border: 2px dashed #007bff; padding: 20px; cursor: pointer; background: #e7f1ff; margin-bottom: 20px; }
-        #imageWrapper { width: 100%; max-height: 400px; display: none; margin-bottom: 20px; overflow: hidden; }
-        img { max-width: 100%; display: block; }
-       .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
-        #photoBtn { background-color: #28a745; }
-        #signBtn { background-color: #ffc107; color: black; }
-       .download-link { display: inline-block; margin-top: 20px; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
-        #status { margin-top: 10px; font-weight: bold; color: #555; }
-    </style>
+    <title>Teletalk Photo & Signature Resizer</title>
+    <link rel="stylesheet" href="cropper.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -27,8 +13,8 @@
     <h2>Teletalk Image Resizer</h2>
     <p>ফটো (৩০০x৩০০) ও স্বাক্ষর (৩০০x৮০)</p>
 
-    <div class="upload-box" onclick="document.getElementById('imageInput').click()">
-        ছবি সিলেক্ট করতে এখানে ক্লিক করুন
+    <div class="upload-box" id="dropZone">
+        এখানে ক্লিক করে ছবি সিলেক্ট করুন
         <input type="file" id="imageInput" accept="image/*" style="display:none">
     </div>
 
@@ -37,113 +23,16 @@
     </div>
 
     <div class="btn-group">
-        <button id="photoBtn">ফটো (300x300)</button>
-        <button id="signBtn">স্বাক্ষর (300x80)</button>
+        <button id="photoBtn" class="btn-green">ফটো (300x300)</button>
+        <button id="signBtn" class="btn-yellow">স্বাক্ষর (300x80)</button>
     </div>
 
     <div id="status"></div>
     <div id="result"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
-<script>
-    let cropper;
-    const imageInput = document.getElementById('imageInput');
-    const imagePreview = document.getElementById('imagePreview');
-    const imageWrapper = document.getElementById('imageWrapper');
-    const status = document.getElementById('status');
-    const resultDiv = document.getElementById('result');
-
-    // ১. একই ছবি বারবার আপলোড করার সমস্যা সমাধান 
-    imageInput.onclick = function() { this.value = null; };
-
-    // ২. ফাইল ইনপুট চেঞ্জ হলে
-    imageInput.onchange = function(e) {
-        const file = e.target.files;
-        if (!file) return;
-
-        status.innerText = "ছবি লোড হচ্ছে...";
-        const reader = new FileReader();
-        
-        reader.onload = function(event) {
-            imagePreview.src = event.target.result;
-            imageWrapper.style.display = 'block';
-
-            // ৩. ছবি পুরোপুরি লোড হওয়ার পর ক্রপার চালু হবে 
-            imagePreview.onload = function() {
-                if (cropper) cropper.destroy();
-                
-                try {
-                    cropper = new Cropper(imagePreview, {
-                        viewMode: 2,
-                        dragMode: 'move',
-                        autoCropArea: 1,
-                        checkOrientation: true
-                    });
-                    status.innerText = "সফলভাবে লোড হয়েছে। এখন সাইজ সিলেক্ট করুন।";
-                } catch (err) {
-                    status.innerText = "Error: ক্রপার চালু করা সম্ভব হয়নি।";
-                    console.error(err);
-                }
-            };
-        };
-        reader.readAsDataURL(file);
-    };
-
-    // ৪. মূল রিসাইজ এবং ফাইল সাইজ কন্ট্রোল ফাংশন [3, 4]
-    async function processImage(width, height, maxKb) {
-        if (!cropper) {
-            alert("দয়া করে আগে একটি ছবি আপলোড করুন!");
-            return;
-        }
-
-        status.innerText = "প্রসেসিং হচ্ছে...";
-        resultDiv.innerHTML = "";
-
-        // ক্যানভাসে নির্দিষ্ট ডাইমেনশনে ছবি নেওয়া [5]
-        const canvas = cropper.getCroppedCanvas({
-            width: width,
-            height: height,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high'
-        });
-
-        let quality = 0.92;
-        let blob;
-        let sizeKb = 0;
-
-        // ৫. ইটারেটিভ কমপ্রেশন: সাইজ না কমা পর্যন্ত কোয়ালিটি কমানো হবে [4]
-        do {
-            blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
-            sizeKb = blob.size / 1024;
-            quality -= 0.05;
-        } while (sizeKb > maxKb && quality > 0.1);
-
-        // ৬. ডাউনলোড লিঙ্ক তৈরি [6]
-        const url = URL.createObjectURL(blob);
-        status.innerText = `রেডি! সাইজ: ${sizeKb.toFixed(2)} KB`;
-        resultDiv.innerHTML = `<a href="${url}" download="teletalk_${width}x${height}.jpg" class="download-link">ডাউনলোড করুন</a>`;
-    }
-
-    // বাটন ক্লিক ইভেন্ট [7]
-    document.getElementById('photoBtn').onclick = () => {
-        if(cropper) cropper.setAspectRatio(1/1);
-        processImage(300, 300, 100);
-    };
-
-    document.getElementById('signBtn').onclick = () => {
-        if(cropper) cropper.setAspectRatio(300/80);
-        processImage(300, 80, 60);
-    };
-
-    // লাইব্রেরি চেক: যদি ইন্টারনেট না থাকে তবে এই মেসেজ দেখাবে
-    window.onload = function() {
-        if (typeof Cropper === 'undefined') {
-            alert("Cropper.js লাইব্রেরি লোড হয়নি! দয়া করে ইন্টারনেট কানেকশন চেক করুন।");
-        }
-    };
-</script>
+<script src="cropper.min.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>
