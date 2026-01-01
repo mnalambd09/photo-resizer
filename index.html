@@ -3,36 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teletalk Photo & Signature Resizer</title>
-    <link rel="stylesheet" href="cropper.min.css">
-    <link rel="stylesheet" href="style.css">
+    <title>Teletalk Resizer - Safe Check</title>
+    
+    <script>
+        window.onerror = function(msg, url, line) {
+            alert("Error: " + msg + "\nLine: " + line);
+        };
+    </script>
+
+    <link rel="stylesheet" href="cropper.min.css" onerror="alert('cropper.min.css ফাইলটি খুঁজে পাওয়া যাচ্ছে না!')">
+    <link rel="stylesheet" href="style.css" onerror="alert('style.css ফাইলটি খুঁজে পাওয়া যাচ্ছে না!')">
 </head>
 <body>
 
 <div class="container">
-    <h2>Teletalk Image Resizer</h2>
-    <p>ফটো (৩০০x৩০০) ও স্বাক্ষর (৩০০x৮০)</p>
+    <h2 id="title">ইমেজ রিসাইজার (নিরাপদ ভার্সন)</h2>
+    
+    <div id="checkList" style="text-align: left; background: #fff3cd; padding: 10px; margin-bottom: 20px; border-radius: 5px; font-size: 13px;">
+        🔍 <b>সিস্টেম চেক:</b>
+        <ul id="statusList">
+            <li id="jsCheck">❌ Cropper.min.js লোড হয়নি</li>
+            <li id="fileCheck">✅ HTML লোড হয়েছে</li>
+        </ul>
+    </div>
 
-    <div class="upload-box" id="dropZone">
+    <div class="upload-box" id="dropZone" style="border: 2px dashed #007bff; padding: 30px; cursor: pointer;">
         এখানে ক্লিক করে ছবি সিলেক্ট করুন
         <input type="file" id="imageInput" accept="image/*" style="display:none">
     </div>
 
-    <div id="imageWrapper">
-        <img id="imagePreview">
+    <div id="imageWrapper" style="display:none; margin-top: 20px;">
+        <img id="imagePreview" style="max-width: 100%; display: block;">
     </div>
 
-    <div class="btn-group">
-        <button id="photoBtn" class="btn-green">ফটো (300x300)</button>
-        <button id="signBtn" class="btn-yellow">স্বাক্ষর (300x80)</button>
+    <div class="btn-group" style="margin-top: 20px;">
+        <button id="photoBtn" style="background:green; color:white; padding:10px;">ফটো (300x300)</button>
+        <button id="signBtn" style="background:orange; padding:10px;">স্বাক্ষর (300x80)</button>
     </div>
 
-    <div id="status"></div>
+    <div id="status" style="margin-top: 15px; font-weight: bold;"></div>
     <div id="result"></div>
 </div>
 
-<script src="cropper.min.js"></script>
-<script src="script.js"></script>
+<script src="cropper.min.js" onerror="alert('cropper.min.js ফাইলটি খুঁজে পাওয়া যাচ্ছে না!')"></script>
+<script src="script.js" onerror="alert('script.js ফাইলটি খুঁজে পাওয়া যাচ্ছে না!')"></script>
+
+<script>
+    // লাইব্রেরি লোড হয়েছে কি না চেক করা
+    window.onload = function() {
+        if (typeof Cropper!== 'undefined') {
+            document.getElementById('jsCheck').innerHTML = "✅ Cropper Library সফলভাবে লোড হয়েছে";
+            document.getElementById('jsCheck').style.color = "green";
+        }
+    };
+</script>
 
 </body>
 </html>
