@@ -1,10 +1,113 @@
-<div class="container">
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teletalk Photo & Signature Resizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; padding: 20px; }
+       .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
+        h2 { color: #2d3436; margin-bottom: 20px; }
+       .upload-section { border: 2px dashed #00b894; padding: 20px; border-radius: 8px; margin-bottom: 20px; cursor: pointer; }
+        #imagePreview { max-width: 100%; display: none; margin-bottom: 20px; }
+       .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        button { background-color: #00b894; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button:hover { background-color: #009475; }
+       .download-link { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #0984e3; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; }
+       .info { font-size: 14px; color: #636e72; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
     <h2>Teletalk Photo Resizer</h2>
-    <input type="file" id="imageInput" accept="image/*">
-    <div style="max-width: 500px; margin: 20px 0;">
-        <img id="imagePreview" style="display:none; max-width: 100%;">
+    <div class="upload-section" onclick="document.getElementById('imageInput').click()">
+        <p>ছবি বা স্বাক্ষর এখানে ক্লিক করে সিলেক্ট করুন</p>
+        <input type="file" id="imageInput" accept="image/*" style="display:none">
     </div>
-    <button id="resizePhotoBtn">Resize Photo (300x300)</button>
-    <button id="resizeSignBtn">Resize Signature (300x80)</button>
-    <div id="result"></div>
+
+    <div>
+        <img id="imagePreview">
+    </div>
+
+    <div class="btn-group">
+        <button id="resizePhotoBtn">Resize Photo (300x300)</button>
+        <button id="resizeSignBtn">Resize Signature (300x80)</button>
+    </div>
+
+    <div id="downloadArea"></div>
+    
+    <div class="info">
+        * ছবি: ৩০০x৩০০ পিক্সেল, ১০০ KB-র নিচে [3]<br>
+        * স্বাক্ষর: ৩০০x৮০ পিক্সেল, ৬০ KB-র নিচে [3]
+    </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+    let cropper;
+    const imageInput = document.getElementById('imageInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const downloadArea = document.getElementById('downloadArea');
+
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files;
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                imagePreview.src = event.target.result;
+                imagePreview.style.display = 'block';
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(imagePreview, {
+                    viewMode: 2,
+                    dragMode: 'move',
+                    autoCropArea: 1
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    async function processImage(width, height, maxKb) {
+        if (!cropper) return alert("দয়া করে আগে একটি ছবি সিলেক্ট করুন!");
+
+        // ছবি রিসাইজ করা [4, 5]
+        const canvas = cropper.getCroppedCanvas({
+            width: width,
+            height: height,
+            imageSmoothingQuality: 'high'
+        });
+
+        // স্মার্ট কমপ্রেশন লজিক (Iterative Quality Adjustment) 
+        let quality = 0.95;
+        let blob;
+        let fileSizeKb = 0;
+
+        do {
+            blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+            fileSizeKb = blob.size / 1024;
+            quality -= 0.05; // সাইজ বেশি হলে কোয়ালিটি ধাপে ধাপে কমানো হবে
+        } while (fileSizeKb > maxKb && quality > 0.1);
+
+        // ডাউনলোড বাটন তৈরি করা [8]
+        const url = URL.createObjectURL(blob);
+        downloadArea.innerHTML = `
+            <p style="color: green; margin-top: 15px;">সফলভাবে রিসাইজ হয়েছে! সাইজ: ${fileSizeKb.toFixed(2)} KB</p>
+            <a href="${url}" download="teletalk_${width}x${height}.jpg" class="download-link">ছবিটি ডাউনলোড করুন</a>
+        `;
+    }
+
+    document.getElementById('resizePhotoBtn').onclick = () => {
+        cropper.setAspectRatio(1/1);
+        processImage(300, 300, 100);
+    };
+
+    document.getElementById('resizeSignBtn').onclick = () => {
+        cropper.setAspectRatio(300/80);
+        processImage(300, 80, 60);
+    };
+</script>
+
+</body>
+</html>
